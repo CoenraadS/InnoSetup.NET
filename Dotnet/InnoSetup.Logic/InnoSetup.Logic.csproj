@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>default</LangVersion>
+    <PlatformTarget>x86</PlatformTarget>
+    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <IsPublishable>False</IsPublishable>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+</Project>
