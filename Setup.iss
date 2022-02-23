@@ -32,7 +32,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Code]
 
 [Files]
-#include "Files\dotnet.iss" // Keep this file first, because they get extracted during setup
+; Keep dotnet.iss file first, because it gets extracted during setup
+#include "Files\dotnet.iss"
 #include "Code\MessageBox.iss"
 #include "Code\InitializeDotnet.iss"
 #include "Code\InitializeSetup.iss"
