@@ -115,11 +115,10 @@ namespace InnoSetup.CodeGenerator.Tests
             // Assert
             Assert.IsTrue(result);
             Assert.AreEqual("ExpandConstant", output.Name);
-            Assert.AreEqual(typeof(void), output.ReturnType);
-            Assert.AreEqual(2, output.Parameters.Count);
+            Assert.AreEqual(typeof(string), output.ReturnType);
+            Assert.AreEqual(1, output.Parameters.Count);
 
             AssertParameter(output.Parameters[0], "S", typeof(string), false);
-            AssertParameter(output.Parameters[1], Parser.StringResultVariableName, typeof(string), true);
         }
 
         private void AssertParameter(Parameter parameter, string name, Type type, bool isOut)

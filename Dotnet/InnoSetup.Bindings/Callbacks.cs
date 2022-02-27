@@ -79,6 +79,8 @@ namespace InnoSetup.Bindings
                 return response;
             };
 
+            ExpandConstantCallback = (string e, out string x) => ExpandConstantCallback(e, out x);
+            LogCallback = e => ExtractTemporaryFileCallback(e);
             Callback.Instance = callback;
         }
     }

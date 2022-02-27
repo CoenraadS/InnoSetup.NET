@@ -2,35 +2,98 @@
 {
     internal static class SignatureCSharpExtensions
     {
+        public const string StringResultVariableName = "result";
+
         public static CSharpCallbackResult ToCSharpCallback(this Signature signature)
         {
-            var delegateType = $"{signature.Name}Delegate";
-            var delegateSignature = $"public delegate {ShortHandType(signature.ReturnType)} {delegateType}({ToParametersString(signature.Parameters)});";
-            var delegateVariable = $"private static {delegateType} {signature.Name}Callback;";
-            var function = $"[DllExport] public static void Register{signature.Name}Callback({delegateType} callback) => {signature.Name}Callback = callback;";
+            var name = signature.Name;
+            var exportSignature = signature;
+            var originalSignature = signature;
+            var returnLastOutParam = false;
+            if (exportSignature.ReturnType == typeof(string))
+            {
+                exportSignature = new Signature(signature.Name, typeof(void), signature.Parameters.Append(new Parameter(StringResultVariableName, typeof(string), true)).ToList());
+                returnLastOutParam = true;
+            }
 
-            return new CSharpCallbackResult(delegateSignature, delegateVariable, function);
+            var delegateType = $"{name}Delegate";
+            var delegateSignature = CreateDelegateSignature(exportSignature, delegateType, true);
+            var delegateVariable = $"private static {delegateType} {name}Callback;";
+            var function = $"[DllExport] public static void Register{name}Callback({delegateType} callback) => {name}Callback = callback;";
+
+            var prettyDelegateSignature = CreateDelegateSignature(originalSignature, delegateType, false);
+
+            var binding = CreateDelegateBinding(returnLastOutParam ? exportSignature : signature, name, returnLastOutParam);
+
+            return new CSharpCallbackResult(delegateSignature, delegateVariable, function, prettyDelegateSignature, binding);
         }
 
-        private static string ToParametersString(IReadOnlyList<Parameter> parameters)
+        private static string CreateDelegateBinding(Signature signature, string name, bool returnLastOutParam)
         {
-            return string.Join(", ", parameters.Select(ToParameterString));
+            string binding;
+            if (!returnLastOutParam)
+            {
+                var lambaParams = paramsWithTypes(signature.Parameters);
+                var lambaParamsWithoutType = paramsWithoutType(signature.Parameters);
+                binding = $"{name} = ({lambaParams}) => {name}Callback({lambaParamsWithoutType});";
+            }
+            else
+            {
+                var lambaParams = paramsWithTypes(signature.Parameters.SkipLast(1));
+                var lambaParamsWithoutType = paramsWithoutType(signature.Parameters.SkipLast(1));
+                binding = $"{name} = ({lambaParams}) => {{ {name}Callback({lambaParamsWithoutType}, out var {StringResultVariableName}); return {StringResultVariableName}; }}";
+            }
+
+            return binding;
         }
 
-        private static string ToParameterString(Parameter parameter)
+        private static string paramsWithoutType(IEnumerable<Parameter> parameters)
         {
-            return $"{GetAttribute(parameter)}{(parameter.Out ? " out" : "")} {ShortHandType(parameter.Type)} {parameter.Name}";
+            return string.Join(", ", parameters.Select(param =>
+            {
+                return $"{(param.Out ? "out " : "")}{param.Name}";
+            }));
         }
 
-        private static string GetAttribute(Parameter parameter)
+        private static string paramsWithTypes(IEnumerable<Parameter> parameters)
+        {
+            return string.Join(", ", parameters.Select(param =>
+            {
+                return $"{(param.Out ? "out " : "")}{ShortHandType(param.Type)} {param.Name}";
+            }));
+        }
+
+        private static string CreateDelegateSignature(Signature signature, string delegateType, bool marshal)
+        {
+            return $"public delegate {ShortHandType(signature.ReturnType)} {delegateType}({ToParametersString(signature.Parameters, marshal)});";
+        }
+
+        private static string ToParametersString(IReadOnlyList<Parameter> parameters, bool marshal)
+        {
+            return string.Join(", ", parameters.Select(e => ToParameterString(e, marshal)));
+        }
+
+        private static string ToParameterString(Parameter parameter, bool marshal)
+        {
+            var prepend = "";
+            if (marshal && TryGetMarshal(parameter, out prepend))
+            {
+                prepend += ' ';
+            }
+            return $"{prepend}{(parameter.Out ? "out " : "")}{ShortHandType(parameter.Type)} {parameter.Name}";
+        }
+
+        private static bool TryGetMarshal(Parameter parameter, out string marshal)
         {
             if (parameter.Type != typeof(string))
             {
-                return string.Empty;
+                marshal = "";
+                return false;
             }
 
             var marshalType = parameter.Out ? "BStr" : "LPWStr";
-            return $"[MarshalAs(UnmanagedType.{marshalType})]";
+            marshal = $"[MarshalAs(UnmanagedType.{marshalType})]";
+            return true;
         }
 
         private static string ShortHandType(Type type)

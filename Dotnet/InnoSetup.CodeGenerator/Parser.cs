@@ -8,7 +8,6 @@ namespace InnoSetup.CodeGenerator;
 
 internal class Parser
 {
-    public const string StringResultVariableName = "result";
     bool TryGetType(string pascalType, [NotNullWhen(returnValue: true)] out Type? type)
     {
         if (pascalType == "")
@@ -95,12 +94,6 @@ internal class Parser
                   type: groupType,
                   @out: firstParamSplit.IsVar
               )));
-        }
-
-        if (returnType == typeof(string))
-        {
-            returnType = typeof(void);
-            parameters.Add(new Parameter(StringResultVariableName, typeof(string), true));
         }
 
         output = new Signature(functionName, returnType, parameters);
