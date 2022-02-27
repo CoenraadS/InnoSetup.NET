@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System;
+using NUnit.Framework;
 
 namespace InnoSetup.CodeGenerator.Tests
 {
@@ -18,10 +19,9 @@ namespace InnoSetup.CodeGenerator.Tests
         {
             // Arrange
             var signature = "procedure CurInstallProgressChanged(CurProgress, MaxProgress: Integer);";
-            var description = "";
 
             // Act
-            var result = sut.TryConvertPascalToCSharp(signature, description, out var output);
+            var result = sut.TryConvertPascalToCSharp(signature, out var output);
 
             // Assert
             Assert.IsTrue(result);
@@ -29,13 +29,8 @@ namespace InnoSetup.CodeGenerator.Tests
             Assert.AreEqual(typeof(void), output.ReturnType);
             Assert.AreEqual(2, output.Parameters.Count);
 
-            Assert.False(output.Parameters[0].Out);
-            Assert.AreEqual(typeof(int), output.Parameters[0].Type);
-            Assert.AreEqual("CurProgress", output.Parameters[0].Name);
-
-            Assert.False(output.Parameters[1].Out);
-            Assert.AreEqual(typeof(int), output.Parameters[1].Type);
-            Assert.AreEqual("MaxProgress", output.Parameters[1].Name);
+            AssertParameter(output.Parameters[0], "CurProgress", typeof(int), false);
+            AssertParameter(output.Parameters[1], "MaxProgress", typeof(int), false);
         }
 
         [Test]
@@ -43,10 +38,9 @@ namespace InnoSetup.CodeGenerator.Tests
         {
             // Arrange
             var signature = "procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);";
-            var description = "";
 
             // Act
-            var result = sut.TryConvertPascalToCSharp(signature, description, out var output);
+            var result = sut.TryConvertPascalToCSharp(signature, out var output);
 
             // Assert
             Assert.IsTrue(result);
@@ -54,17 +48,9 @@ namespace InnoSetup.CodeGenerator.Tests
             Assert.AreEqual(typeof(void), output.ReturnType);
             Assert.AreEqual(3, output.Parameters.Count);
 
-            Assert.False(output.Parameters[0].Out);
-            Assert.AreEqual(typeof(int), output.Parameters[0].Type);
-            Assert.AreEqual("CurPageID", output.Parameters[0].Name);
-
-            Assert.True(output.Parameters[1].Out);
-            Assert.AreEqual(typeof(bool), output.Parameters[1].Type);
-            Assert.AreEqual("Cancel", output.Parameters[1].Name);
-
-            Assert.True(output.Parameters[2].Out);
-            Assert.AreEqual(typeof(bool), output.Parameters[2].Type);
-            Assert.AreEqual("Confirm", output.Parameters[2].Name);
+            AssertParameter(output.Parameters[0], "CurPageID", typeof(int), false);
+            AssertParameter(output.Parameters[1], "Cancel", typeof(bool), true);
+            AssertParameter(output.Parameters[2], "Confirm", typeof(bool), true);
         }
 
         [Test]
@@ -72,10 +58,9 @@ namespace InnoSetup.CodeGenerator.Tests
         {
             // Arrange
             var signature = "function InitializeSetup(): Boolean;";
-            var description = "";
 
             // Act
-            var result = sut.TryConvertPascalToCSharp(signature, description, out var output);
+            var result = sut.TryConvertPascalToCSharp(signature, out var output);
 
             // Assert
             Assert.IsTrue(result);
@@ -89,16 +74,59 @@ namespace InnoSetup.CodeGenerator.Tests
         {
             // Arrange
             var signature = "procedure InitializeWizard();";
-            var description = "";
 
             // Act
-            var result = sut.TryConvertPascalToCSharp(signature, description, out var output);
+            var result = sut.TryConvertPascalToCSharp(signature, out var output);
 
             // Assert
             Assert.IsTrue(result);
             Assert.AreEqual("InitializeWizard", output.Name);
             Assert.AreEqual(typeof(void), output.ReturnType);
             Assert.AreEqual(0, output.Parameters.Count);
+        }
+
+        [Test]
+        public void CanParseSignature5()
+        {
+            // Arrange
+            var signature = "procedure Log(const S: String);";
+
+            // Act
+            var result = sut.TryConvertPascalToCSharp(signature, out var output);
+
+            // Assert
+            Assert.IsTrue(result);
+            Assert.AreEqual("Log", output.Name);
+            Assert.AreEqual(typeof(void), output.ReturnType);
+            Assert.AreEqual(1, output.Parameters.Count);
+
+            AssertParameter(output.Parameters[0], "S", typeof(string), false);
+        }
+
+        [Test]
+        public void CanParseSignature6()
+        {
+            // Arrange
+            var signature = "function ExpandConstant(const S: String): String;";
+
+            // Act
+            var result = sut.TryConvertPascalToCSharp(signature, out var output);
+
+            // Assert
+            Assert.IsTrue(result);
+            Assert.AreEqual("ExpandConstant", output.Name);
+            Assert.AreEqual(typeof(void), output.ReturnType);
+            Assert.AreEqual(2, output.Parameters.Count);
+
+            AssertParameter(output.Parameters[0], "S", typeof(string), false);
+            AssertParameter(output.Parameters[1], Parser.StringResultVariableName, typeof(string), true);
+        }
+
+        private void AssertParameter(Parameter parameter, string name, Type type, bool isOut)
+        {
+            Assert.AreEqual(isOut, parameter.Out);
+            Assert.AreEqual(name, parameter.Name);
+            Assert.AreEqual(type, parameter.Type);
         }
     }
 }

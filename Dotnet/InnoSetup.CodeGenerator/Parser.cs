@@ -8,6 +8,7 @@ namespace InnoSetup.CodeGenerator;
 
 internal class Parser
 {
+    public const string StringResultVariableName = "result";
     bool TryGetType(string pascalType, [NotNullWhen(returnValue: true)] out Type? type)
     {
         if (pascalType == "")
@@ -34,11 +35,17 @@ internal class Parser
             return true;
         }
 
+        if (pascalType == "Longword")
+        {
+            type = typeof(uint);
+            return true;
+        }
+
         type = null;
         return false;
     }
 
-    public bool TryConvertPascalToCSharp(string signature, string description, [NotNullWhen(returnValue: true)] out Signature? output)
+    public bool TryConvertPascalToCSharp(string signature, [NotNullWhen(returnValue: true)] out Signature? output)
     {
         // e.g. function NextButtonClick(CurPageID: Integer): Boolean;
 
@@ -58,13 +65,13 @@ internal class Parser
             return false;
         }
 
-        List<Parameter> parameters = new List<Parameter>();
+        var parameters = new List<Parameter>();
         foreach (var rawParamGroup in rawParamString)
         {
             // e.g. var Cancel, Confirm: Boolean
 
             // [var Cancel, Confirm: Boolean]
-            var rawIndividualParams = rawParamGroup.Split(", ").ToList(); ;
+            var rawIndividualParams = rawParamGroup.Split(", ", StringSplitOptions.TrimEntries).ToList(); ;
 
             // [Confirm, Boolean]
             var lastParamSplit = SplitType(rawIndividualParams[rawIndividualParams.Count - 1]);
@@ -77,7 +84,7 @@ internal class Parser
 
             rawIndividualParams[rawIndividualParams.Count - 1] = lastParamSplit.FirstPart;
 
-            var firstParamSplit = SplitVar(rawIndividualParams[0]);
+            var firstParamSplit = ParseFirstToken(rawIndividualParams[0]);
 
             rawIndividualParams[0] = firstParamSplit.LastPart;
 
@@ -90,22 +97,36 @@ internal class Parser
               )));
         }
 
+        if (returnType == typeof(string))
+        {
+            returnType = typeof(void);
+            parameters.Add(new Parameter(StringResultVariableName, typeof(string), true));
+        }
+
         output = new Signature(functionName, returnType, parameters);
         return true;
     }
 
-    private (bool IsVar, string LastPart) SplitVar(string parameter)
+    private (bool IsVar, string LastPart) ParseFirstToken(string parameter)
     {
-        var split = parameter.Split("var ");
+        var isVar = false;
+        if (parameter.StartsWith("var "))
+        {
+            parameter = parameter.Remove(0, 4);
+            isVar = true;
+        }
 
-        var isVar = split.Length == 2;
+        if (parameter.StartsWith("const "))
+        {
+            parameter = parameter.Remove(0, 6);
+        }
 
-        return (isVar, split[split.Length - 1]);
+        return (isVar, parameter);
     }
 
     private (string FirstPart, string Type) SplitType(string parameter)
     {
-        var split = parameter.Split(": ");
+        var split = parameter.Split(": ", StringSplitOptions.TrimEntries);
 
         return (split[0], split[1]);
     }
